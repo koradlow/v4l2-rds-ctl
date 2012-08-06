@@ -524,16 +524,18 @@ static time_t rds_decode_mjd(const struct rds_private_state *priv_state)
 	/* offset is given in multiples of half hrs */
 	uint32_t offset = priv_state->utc_offset & 0x1f;
 	uint32_t local_mjd = priv_state->new_mjd;
+	uint8_t local_hour = priv_state->utc_hour;
+	uint8_t local_minute = priv_state->utc_minute;
 
 	/* add / subtract the local offset to get the local time */
 	/* local offset is expressed in multiples of half hours */
-	if (priv_state->utc_offset & 0x20) /* bit 5 indicates -/+ */
-		local_mjd -= (offset * 2 - 12) / 24;
-	else
-		local_mjd += (offset * 2 - 12) / 24;
-	/* add the UTC values to get the local time */
-	local_mjd += (priv_state->utc_hour - 12) / 24;
-	local_mjd += priv_state->utc_minute / 1400;
+	if (priv_state->utc_offset & 0x20) { /* bit 5 indicates -/+ */
+		local_hour -= (offset * 2);
+		local_minute -= (offset % 2) * 30;
+	} else {
+		local_hour += (offset * 2);
+		local_minute += (offset % 2) * 30;
+	}
 
 	/* the formulas for the conversion are taken from Annex G of the
 	 * IEC 62106 RDS standard */
@@ -601,7 +603,7 @@ static uint32_t rds_decode_group4(struct rds_private_state *priv_state)
 	handle->time = rds_decode_mjd(priv_state);
 	updated_fields |= V4L2_RDS_TIME;
 	handle->valid_fields |= V4L2_RDS_TIME;
-
+	printf("\nLIB: time_t: %ld", handle->time);
 	return updated_fields;
 }
 
