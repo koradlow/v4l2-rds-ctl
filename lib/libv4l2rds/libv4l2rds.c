@@ -347,8 +347,12 @@ static uint32_t rds_decode_group0(struct rds_private_state *priv_state)
 		case 3:
 			priv_state->new_di = set_bit(priv_state->new_di,
 				V4L2_RDS_FLAG_STATIC_PTY, bit2);
-			if (handle->di != priv_state->new_di)
+			/* check if the value of DI has changed, and store
+			 * and signal DI update in case */
+			if (handle->di != priv_state->new_di) {
+				handle->di = priv_state->new_di;
 				updated_fields |= V4L2_RDS_DI;
+			}
 			priv_state->next_di_segment = 0;
 			handle->valid_fields |= V4L2_RDS_DI;
 			break;
