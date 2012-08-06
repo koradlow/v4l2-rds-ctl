@@ -14,6 +14,7 @@ AC_CONFIG_FILES([Makefile
 	lib/libv4l2/Makefile
 	lib/libv4l1/Makefile
 	lib/libdvbv5/Makefile
+	lib/libv4l2rds/Makefile
 
 	utils/libv4l2util/Makefile
 	utils/libmedia_dev/Makefile
@@ -36,6 +37,7 @@ AC_CONFIG_FILES([Makefile
 	lib/libv4l1/libv4l1.pc
 	lib/libv4l2/libv4l2.pc
 	lib/libdvbv5/libdvbv5.pc
+	lib/libv4l2rds/libv4l2rds.pc
 ])
 
 AM_INIT_AUTOMAKE([1.9 no-dist-gzip dist-bzip2 -Wno-portability]) # 1.10 is needed for target_LIBTOOLFLAGS
@@ -146,9 +148,12 @@ AC_ARG_WITH(libv4l2subdir, AS_HELP_STRING(--with-libv4l2subdir=DIR,set libv4l2 l
 AC_ARG_WITH(libv4lconvertsubdir, AS_HELP_STRING(--with-libv4lconvertsubdir=DIR,set libv4lconvert library subdir [default=libv4l]),
    libv4lconvertsubdir=$withval, libv4lconvertsubdir="libv4l")
 
+AC_ARG_WITH(libv4l2rdssubdir, AS_HELP_STRING(--with-libv4l2rdssubdir=DIR,set libv4l2rds library subdir [default=libv4l]),
+   libv4l2rdssubdir=$withval, libv4l2rdssubdir="libv4l")
+
 AC_ARG_WITH(udevdir, AS_HELP_STRING(--with-udevdir=DIR,set udev directory [default=/lib/udev]),
    udevdir=$withval, udevdir="/lib/udev")
-
+   
 libv4l1privdir="$libdir/$libv4l1subdir"
 libv4l2privdir="$libdir/$libv4l2subdir"
 libv4l2plugindir="$libv4l2privdir/plugins"
