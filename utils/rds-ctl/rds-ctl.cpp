@@ -1,10 +1,10 @@
 /*
  * rds-ctl.cpp is based on v4l2-ctl.cpp
- * 
+ *
  * the following applies for all RDS related parts:
  * Copyright 2012 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  * Author: Konke Radlow <koradlow@gmail.com>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation; either version 2.1 of the License, or
@@ -357,8 +357,8 @@ static void print_devices(dev_vec files)
 	int fd = -1;
 	std::string bus_info;
 	struct v4l2_capability vcap;
-	
-	for (dev_vec::iterator iter = files.begin(); 
+
+	for (dev_vec::iterator iter = files.begin();
 		iter != files.end(); ++iter) {
 		fd = open(iter->c_str(), O_RDWR);
 		memset(&vcap, 0, sizeof(vcap));
@@ -384,7 +384,7 @@ static dev_vec list_devices(void)
 	struct dirent *ep;
 	dev_vec files;
 	dev_map links;
-	
+
 	struct v4l2_tuner vt;
 
 	dp = opendir("/dev");
@@ -499,7 +499,7 @@ static void print_byte(char byte, bool linebreak)
 	while (count--) {
 		printf("%d", (byte & 128) ? 1 : 0 );
 		byte <<= 1;
-	} 
+	}
 	if (linebreak)
 		printf("\n");
 }
@@ -522,7 +522,7 @@ static void print_rds_group(const struct v4l2_rds_group *rds_group)
 
 static void print_decoder_info(uint8_t di)
 {
-	printf("\nDI: "); 
+	printf("\nDI: ");
 	if (di & V4L2_RDS_FLAG_STEREO)
 		printf("Stereo, ");
 	else
@@ -580,7 +580,7 @@ static void print_rds_data(const struct v4l2_rds *handle, uint32_t updated_field
 	if (params.options[OptPrintBlock])
 		updated_fields = 0xffffffff;
 
-	if ((updated_fields & V4L2_RDS_PI) && 
+	if ((updated_fields & V4L2_RDS_PI) &&
 			(handle->valid_fields & V4L2_RDS_PI)) {
 		printf("\nPI: %04x", handle->pi);
 		print_rds_pi(handle);
@@ -607,7 +607,7 @@ static void print_rds_data(const struct v4l2_rds *handle, uint32_t updated_field
 			/* filter out special characters */
 			if (handle->ptyn[i] >= 0x20 && handle->ptyn[i] <= 0x7E)
 				printf("%lc",handle->ptyn[i]);
-			else 
+			else
 				printf(" ");
 		}
 	}
@@ -621,7 +621,7 @@ static void print_rds_data(const struct v4l2_rds *handle, uint32_t updated_field
 			/* filter out special characters */
 			if (handle->rt[i] >= 0x20 && handle->rt[i] <= 0x7E)
 				printf("%lc",handle->rt[i]);
-			else 
+			else
 				printf(" ");
 		}
 	}
@@ -640,10 +640,10 @@ static void print_rds_data(const struct v4l2_rds *handle, uint32_t updated_field
 		v4l2_rds_get_language_str(handle));
 	if (updated_fields & V4L2_RDS_DI && handle->valid_fields & V4L2_RDS_DI)
 		print_decoder_info(handle->di);
-	if (updated_fields & V4L2_RDS_ODA && 
+	if (updated_fields & V4L2_RDS_ODA &&
 			handle->decode_information & V4L2_RDS_ODA) {
 		for (int i = 0; i < handle->rds_oda.size; ++i)
-			printf("\nODA Group: %02u%c, AID: %08x",handle->rds_oda.oda[i].group_id, 
+			printf("\nODA Group: %02u%c, AID: %08x",handle->rds_oda.oda[i].group_id,
 			handle->rds_oda.oda[i].group_version, handle->rds_oda.oda[i].aid);
 	}
 	if (updated_fields & V4L2_RDS_AF && handle->valid_fields & V4L2_RDS_AF)
@@ -670,7 +670,7 @@ static void read_rds(struct v4l2_rds *handle, const int fd, const int wait_limit
 					"device (no RDS data available)\n");
 				break;
 			}
-			/* wait for new data to arrive: transmission of 1 
+			/* wait for new data to arrive: transmission of 1
 			 * group takes ~88.7ms */
 			usleep(wait_limit * 1000);
 		}
@@ -711,8 +711,8 @@ static int parse_cl(int argc, char **argv)
 	int i = 0;
 	int idx = 0;
 	int opt = 0;
-	/* 26 letters in the alphabet, case sensitive = 26 * 2 possible 
-	 * short options, where each option requires at most two chars 
+	/* 26 letters in the alphabet, case sensitive = 26 * 2 possible
+	 * short options, where each option requires at most two chars
 	 * {option, optional argument} */
 	char short_options[26 * 2 * 2 + 1];
 
@@ -759,14 +759,14 @@ static int parse_cl(int argc, char **argv)
 			params.tuner_index = strtoul(optarg, NULL, 0);
 			break;
 		case OptOpenFile:
-		{	
+		{
 			if (access(optarg, F_OK) != -1) {
 				params.filemode_active = true;
 				strncpy(params.fd_name, optarg, 80);
 			} else {
 				fprintf(stderr, "Unable to open file: %s\n", optarg);
 				return -1;
-			} 
+			}
 			/* enable the read-rds option by default for convenience */
 			params.options[OptReadRds] = 1;
 			break;
@@ -795,7 +795,7 @@ static int parse_cl(int argc, char **argv)
 		return 1;
 	}
 	if (params.options[OptAll]) {
-		params.options[OptGetDriverInfo] = 1;	
+		params.options[OptGetDriverInfo] = 1;
 		params.options[OptGetFreq] = 1;
 		params.options[OptGetTuner] = 1;
 		params.options[OptSilent] = 1;
@@ -842,9 +842,9 @@ static void set_options(const int fd, const int capabilities, struct v4l2_freque
 		vf->frequency = __u32(params.freq * fac);
 		if (doioctl(fd, VIDIOC_S_FREQUENCY, vf) == 0)
 			printf("Frequency for tuner %d set to %d (%f MHz)\n",
-				   vf->tuner, vf->frequency, vf->frequency / fac);
+				vf->tuner, vf->frequency, vf->frequency / fac);
 	}
-	
+
 	if (params.options[OptSetTuner]) {
 		struct v4l2_tuner vt;
 
@@ -944,7 +944,7 @@ int main(int argc, char **argv)
 	memset(&vcap, 0, sizeof(vcap));
 	memset(&vf, 0, sizeof(vf));
 	strcpy(params.fd_name, "/dev/radio0");
-	
+
 	/* define locale for unicode support */
 	if (!setlocale(LC_CTYPE, "")) {
 		fprintf(stderr, "Can't set the specified locale!\n");
@@ -970,7 +970,7 @@ int main(int argc, char **argv)
 		test_close(fd);
 		exit(0);
 	}
-	
+
 	/* Device Mode: open the radio device as read-only and non-blocking */
 	if (!params.options[OptSetDevice]) {
 		/* check the system for RDS capable devices */
