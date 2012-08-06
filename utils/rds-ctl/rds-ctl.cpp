@@ -72,6 +72,7 @@ enum Option {
 	OptAll = 128,
 	OptFreqSeek,
 	OptListDevices,
+	OptListFreqBands,
 	OptOpenFile,
 	OptPrintBlock,
 	OptSilent,
@@ -105,6 +106,7 @@ static struct option long_options[] = {
 	{"help", no_argument, 0, OptHelp},
 	{"info", no_argument, 0, OptGetDriverInfo},
 	{"list-devices", no_argument, 0, OptListDevices},
+	{"list-freq-bands", no_argument, 0, OptListFreqBands},
 	{"print-block", no_argument, 0, OptPrintBlock},
 	{"read-rds", no_argument, 0, OptReadRds},
 	{"set-freq", required_argument, 0, OptSetFreq},
@@ -148,6 +150,8 @@ static void usage_tuner(void)
 	       "                     dir is 0 (seek downward) or 1 (seek upward)\n"
 	       "                     wrap is 0 (do not wrap around) or 1 (wrap around)\n"
 	       "                     spacing sets the seek resolution (use 0 for default)\n"
+	       "  --list-freq-bands  display all frequency bands for the tuner/modulator\n"
+	       "                     [VIDIOC_ENUM_FREQ_BANDS]\n"
 	       );
 }
 
@@ -306,6 +310,19 @@ static std::string cap2s(unsigned cap)
 	if (cap & V4L2_CAP_DEVICE_CAPS)
 		s += "\t\tDevice Capabilities\n";
 	return s;
+}
+
+static std::string modulation2s(unsigned modulation)
+{
+	switch (modulation) {
+	case V4L2_BAND_MODULATION_VSB:
+		return "VSB";
+	case V4L2_BAND_MODULATION_FM:
+		return "FM";
+	case V4L2_BAND_MODULATION_AM:
+		return "AM";
+	}
+	return "Unknown";
 }
 
 static bool is_radio_dev(const char *name)
@@ -886,6 +903,30 @@ static void get_options(const int fd, const int capabilities, struct v4l2_freque
 			printf("\tCurrent audio mode   : %s\n", audmode2s(vt.audmode));
 			printf("\tAvailable subchannels: %s\n",
 					rxsubchans2s(vt.rxsubchans).c_str());
+		}
+	}
+
+	if (params.options[OptListFreqBands]) {
+		struct v4l2_frequency_band band;
+
+		memset(&band, 0, sizeof(band));
+		band.tuner = params.tuner_index;
+		band.type = V4L2_TUNER_ANALOG_TV;
+		band.index = 0;
+		printf("ioctl: VIDIOC_ENUM_FREQ_BANDS\n");
+		while (test_ioctl(fd, VIDIOC_ENUM_FREQ_BANDS, &band) >= 0) {
+			if (band.index)
+				printf("\n");
+			printf("\tIndex          : %d\n", band.index);
+			printf("\tModulation     : %s\n", modulation2s(band.modulation).c_str());
+			printf("\tCapability     : %s\n", tcap2s(band.capability).c_str());
+			if (band.capability & V4L2_TUNER_CAP_LOW)
+				printf("\tFrequency Range: %.3f MHz - %.3f MHz\n",
+				     band.rangelow / 16000.0, band.rangehigh / 16000.0);
+			else
+				printf("\tFrequency Range: %.3f MHz - %.3f MHz\n",
+				     band.rangelow / 16.0, band.rangehigh / 16.0);
+			band.index++;
 		}
 	}
 }
