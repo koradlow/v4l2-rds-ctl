@@ -560,8 +560,6 @@ static void print_rds_pi(const struct v4l2_rds *handle)
 
 static void print_rds_data(const struct v4l2_rds *handle, uint32_t updated_fields)
 {
-	char buffer[12];
-
 	if (params.options[OptPrintBlock])
 		updated_fields = 0xffffffff;
 
@@ -810,27 +808,19 @@ static void print_driver_info(const struct v4l2_capability *vcap)
 }
 
 static void set_options(const int fd, const int capabilities, struct v4l2_frequency *vf,
-			struct v4l2_modulator *modulator, struct v4l2_tuner *tuner)
+			struct v4l2_tuner *tuner)
 {
 	int mode = -1;			/* set audio mode */
+	double fac = 16;		/* factor for frequency division */
 
 	if (params.options[OptSetFreq]) {
-		double fac = 16;
-
-		if (capabilities & V4L2_CAP_MODULATOR) {
-			vf->type = V4L2_TUNER_RADIO;
-			modulator->index = params.tuner_index;
-			if (doioctl(fd, VIDIOC_G_MODULATOR, modulator) == 0) {
-				fac = (modulator->capability & V4L2_TUNER_CAP_LOW) ? 16000 : 16;
-			}
-		} else {
-			vf->type = V4L2_TUNER_ANALOG_TV;
-			tuner->index = params.tuner_index;
-			if (doioctl(fd, VIDIOC_G_TUNER, tuner) == 0) {
-				fac = (tuner->capability & V4L2_TUNER_CAP_LOW) ? 16000 : 16;
-				vf->type = tuner->type;
-			}
+		vf->type = V4L2_TUNER_ANALOG_TV;
+		tuner->index = params.tuner_index;
+		if (doioctl(fd, VIDIOC_G_TUNER, tuner) == 0) {
+			fac = (tuner->capability & V4L2_TUNER_CAP_LOW) ? 16000 : 16;
+			vf->type = tuner->type;
 		}
+
 		vf->tuner = params.tuner_index;
 		vf->frequency = __u32(params.freq * fac);
 		if (doioctl(fd, VIDIOC_S_FREQUENCY, vf) == 0)
@@ -858,23 +848,16 @@ static void set_options(const int fd, const int capabilities, struct v4l2_freque
 }
 
 static void get_options(const int fd, const int capabilities, struct v4l2_frequency *vf,
-			struct v4l2_modulator *modulator, struct v4l2_tuner *tuner)
+			struct v4l2_tuner *tuner)
 {
-	if (params.options[OptGetFreq]) {
-		double fac = 16;
+	double fac = 16;		/* factor for frequency division */
 
-		if (capabilities & V4L2_CAP_MODULATOR) {
-			vf->type = V4L2_TUNER_RADIO;
-			modulator->index = params.tuner_index;
-			if (doioctl(fd, VIDIOC_G_MODULATOR, modulator) == 0)
-				fac = (modulator->capability & V4L2_TUNER_CAP_LOW) ? 16000 : 16;
-		} else {
-			vf->type = V4L2_TUNER_ANALOG_TV;
-			tuner->index = params.tuner_index;
-			if (doioctl(fd, VIDIOC_G_TUNER, tuner) == 0) {
-				fac = (tuner->capability & V4L2_TUNER_CAP_LOW) ? 16000 : 16;
-				vf->type = tuner->type;
-			}
+	if (params.options[OptGetFreq]) {
+		vf->type = V4L2_TUNER_ANALOG_TV;
+		tuner->index = params.tuner_index;
+		if (doioctl(fd, VIDIOC_G_TUNER, tuner) == 0) {
+			fac = (tuner->capability & V4L2_TUNER_CAP_LOW) ? 16000 : 16;
+			vf->type = tuner->type;
 		}
 		vf->tuner = params.tuner_index;
 		if (doioctl(fd, VIDIOC_G_FREQUENCY, vf) == 0)
@@ -913,12 +896,10 @@ int main(int argc, char **argv)
 
 	/* command args */
 	struct v4l2_tuner tuner;	/* set_freq/get_freq */
-	struct v4l2_modulator modulator;/* set_freq/get_freq */
 	struct v4l2_capability vcap;	/* list_cap */
 	struct v4l2_frequency vf;	/* get_freq/set_freq */
 
 	memset(&tuner, 0, sizeof(tuner));
-	memset(&modulator, 0, sizeof(modulator));
 	memset(&vcap, 0, sizeof(vcap));
 	memset(&vf, 0, sizeof(vf));
 	strcpy(params.fd_name, "/dev/radio0");
@@ -971,9 +952,9 @@ int main(int argc, char **argv)
 	if (params.options[OptGetDriverInfo])
 		print_driver_info(&vcap);
 	/* Set options */
-	set_options(fd, vcap.capabilities, &vf, &modulator, &tuner);
+	set_options(fd, vcap.capabilities, &vf, &tuner);
 	/* Get options */
-	get_options(fd, vcap.capabilities, &vf, &modulator, &tuner);
+	get_options(fd, vcap.capabilities, &vf, &tuner);
 	/* RDS decoding */
 	if (params.options[OptReadRds])
 		read_rds_from_fd(fd);
