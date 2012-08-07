@@ -71,6 +71,9 @@ extern "C" {
 #define V4L2_RDS_AF		0x800	/* AF (alternative freq) available */
 #define V4L2_RDS_ECC		0x1000	/* Extended County Code */
 #define V4L2_RDS_LC		0x2000	/* Language Code */
+#define V4L2_RDS_TMC_SG		0x4000	/* RDS-TMC single group */
+#define V4L2_RDS_TMC_MG		0x8000	/* RDS-TMC multi group */
+#define V4L2_RDS_TMC_SYS	0x10000 /* RDS-TMC system information */
 
 /* Define Constants for the state of the RDS decoding process
  * used to address the relevant bit in the decode_information bitmask */
@@ -84,6 +87,11 @@ extern "C" {
 #define V4L2_RDS_FLAG_COMPRESSED	0x04
 #define V4L2_RDS_FLAG_STATIC_PTY	0x08
 
+/* TMC related codes
+ * used to extract TMC fields from RDS groups */
+#define V4L2_TMC_TUNING_INFO	0x08
+#define V4L2_TMC_SINGLE_GROUP	0x04
+ 
 /* struct to encapsulate one complete RDS group */
 /* This structure is used internally to store data until a complete RDS
  * group was received and group id dependent decoding can be done.
@@ -145,6 +153,57 @@ struct v4l2_rds_af_set {
 	uint32_t af[MAX_AF_CNT];	/* AFs defined in Hz */
 };
 
+/* struct to encapsulate an additional data field in a TMC message */
+struct v4l2_tmc_additional {
+	uint8_t label;
+	uint16_t data;
+};
+
+/* struct to encapsulate an arbitrary number of additional data fields
+ * belonging to one TMC message
+ * decoding of raw additional data into this data structure is done on 
+ * the fly, giving the user easy access to optional data fields */
+struct v4l2_tmc_additional_set {
+	uint8_t size;
+	struct v4l2_tmc_additional *fields;
+};
+ 
+/* struct to encapsule a decoded TMC message with optional undecoded
+ * subsequent groups to store multi-group TMC messages */
+struct v4l2_rds_tmc_msg {
+	uint8_t length;	/* lenght of multi-group message (0..4) */
+	uint8_t sid;		/* service identifier at time of reception */
+	uint8_t extent;
+	uint8_t dp;		/* duration and persistence */
+	uint16_t event;		/* TMC event code */
+	uint16_t location;	/* TMC event location */
+	bool follow_diversion;	/* indicates if the driver is adviced to
+				 * follow the diversion */
+	bool neg_direction;	/* indicates negative / positive direction */ 
+	uint32_t optional[4];	/* 112 bits of optional additional data */
+};
+
+/* struct to encapsule all TMC related information, including TMC System
+ * Information, TMC Tuning information and a buffer for the last N decoded
+ * TMC messages */
+struct v4l2_rds_tmc {
+	uint8_t ltn;		/* location_table_number */
+	bool afi;		/* alternative frequency indicator */
+	bool enhanced_mode;	/* mode of transmission, 
+				 * if false -> basic => gaps between tmc groups
+				 * gap defines timing behavior 
+				 * if true -> enhanced => t_a, t_w and t_d
+				 * define timing behavior of tmc groups */
+	uint8_t mgs;		/* message geographical scope */
+	uint8_t sid;		/* service identifier (unique ID on national level) */
+	uint8_t gap;		/* Gap parameters */
+	uint8_t t_a;		/* activity time (only if mode = enhanced) */
+	uint8_t t_w;		/* window time (only if mode = enhanced */
+	uint8_t t_d;		/* delay time (only if mode = enhanced */
+	uint8_t spn[9];		/* service provider name */
+	struct v4l2_rds_tmc_msg tmc_msg;
+};
+
 /* struct to encapsulate state and RDS information for current decoding process */
 /* This is the structure that will be used by external applications, to
  * communicate with the library and get access to RDS data */
@@ -182,6 +241,7 @@ struct v4l2_rds {
 	struct v4l2_rds_statistics rds_statistics;
 	struct v4l2_rds_oda_set rds_oda;	/* Open Data Services */
 	struct v4l2_rds_af_set rds_af; 		/* Alternative Frequencies */
+	struct v4l2_rds_tmc tmc;		/* TMC information */
 };
 
 /* v4l2_rds_init() - initializes a new decoding process
@@ -221,6 +281,10 @@ LIBV4L_PUBLIC const char *v4l2_rds_get_coverage_str(const struct v4l2_rds *handl
 LIBV4L_PUBLIC const struct v4l2_rds_group *v4l2_rds_get_group
 	(const struct v4l2_rds *handle);
 
+/* decodes the additional information of a RDS-TMC message into a easily 
+ * accessable form */
+LIBV4L_PUBLIC const struct v4l2_tmc_additional_set *v4l2_rds_tmc_get_additional\
+	(const struct v4l2_rds *handle);
 
 #ifdef __cplusplus
 }
