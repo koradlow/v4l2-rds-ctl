@@ -330,27 +330,6 @@ static bool is_radio_dev(const char *name)
 	return !memcmp(name, "radio", 5);
 }
 
-static int calc_node_val(const char *s)
-{
-	int n = 0;
-
-	s = strrchr(s, '/') + 1;
-	if (!memcmp(s, "video", 5)) n = 0;
-	else if (!memcmp(s, "radio", 5)) n = 0x100;
-	else if (!memcmp(s, "vbi", 3)) n = 0x200;
-	else if (!memcmp(s, "vtx", 3)) n = 0x300;
-	n += atol(s + (n >= 0x200 ? 3 : 5));
-	return n;
-}
-
-static bool sort_on_device_name(const std::string &s1, const std::string &s2)
-{
-	int n1 = calc_node_val(s1.c_str());
-	int n2 = calc_node_val(s2.c_str());
-
-	return n1 < n2;
-}
-
 static void print_devices(dev_vec files)
 {
 	dev_map cards;
@@ -397,33 +376,8 @@ static dev_vec list_devices(void)
 			files.push_back(std::string("/dev/") + ep->d_name);
 	closedir(dp);
 
-	/* Find device nodes which are links to other device nodes */
-	for (dev_vec::iterator iter = files.begin();
-			iter != files.end(); ) {
-		char link[64+1];
-		int link_len;
-		std::string target;
-
-		link_len = readlink(iter->c_str(), link, 64);
-		if (link_len < 0) {	/* Not a link or error */
-			iter++;
-			continue;
-		}
-		link[link_len] = '\0';
-
-		/* Only remove from files list if target itself is in list */
-		if (link[0] != '/')	/* Relative link */
-			target = std::string("/dev/");
-		target += link;
-		if (find(files.begin(), files.end(), target) == files.end()) {
-			iter++;
-			continue;
-		}
-		files.erase(iter);
-	}
 	/* Iterate through all devices, and remove all non-accessible devices
 	 * and all devices that don't offer the RDS_BLOCK_IO capability */
-	std::sort(files.begin(), files.end(), sort_on_device_name);
 	for (dev_vec::iterator iter = files.begin();
 			iter != files.end(); ++iter) {
 		int fd = open(iter->c_str(), O_RDONLY | O_NONBLOCK);
@@ -831,7 +785,7 @@ static void set_options(const int fd, const int capabilities, struct v4l2_freque
 	double fac = 16;		/* factor for frequency division */
 
 	if (params.options[OptSetFreq]) {
-		vf->type = V4L2_TUNER_ANALOG_TV;
+		vf->type = V4L2_TUNER_RADIO;
 		tuner->index = params.tuner_index;
 		if (doioctl(fd, VIDIOC_G_TUNER, tuner) == 0) {
 			fac = (tuner->capability & V4L2_TUNER_CAP_LOW) ? 16000 : 16;
@@ -870,7 +824,7 @@ static void get_options(const int fd, const int capabilities, struct v4l2_freque
 	double fac = 16;		/* factor for frequency division */
 
 	if (params.options[OptGetFreq]) {
-		vf->type = V4L2_TUNER_ANALOG_TV;
+		vf->type = V4L2_TUNER_RADIO;
 		tuner->index = params.tuner_index;
 		if (doioctl(fd, VIDIOC_G_TUNER, tuner) == 0) {
 			fac = (tuner->capability & V4L2_TUNER_CAP_LOW) ? 16000 : 16;
@@ -911,7 +865,7 @@ static void get_options(const int fd, const int capabilities, struct v4l2_freque
 
 		memset(&band, 0, sizeof(band));
 		band.tuner = params.tuner_index;
-		band.type = V4L2_TUNER_ANALOG_TV;
+		band.type = V4L2_TUNER_RADIO;
 		band.index = 0;
 		printf("ioctl: VIDIOC_ENUM_FREQ_BANDS\n");
 		while (test_ioctl(fd, VIDIOC_ENUM_FREQ_BANDS, &band) >= 0) {
