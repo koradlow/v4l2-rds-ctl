@@ -212,15 +212,7 @@ static bool rds_compare_group(const struct v4l2_rds_group *a,
 /* returns a bitmask with with number of bits set to 1 and all others to 0 */
 static uint32_t get_bitmask(uint8_t bit_cnt)
 {
-	uint32_t bitmask = 0x00;
-	uint32_t bit = 0x01;
-	
-	for (uint8_t i = 0; i < bit_cnt; i++) {
-		bitmask |= bit;
-		bit *= 2;
-	}
-
-	return bitmask;
+	return (1 << bit_cnt) - 1;
 }
 
 /* decode additional information of a TMC message into handy representation */
@@ -229,7 +221,7 @@ static uint32_t get_bitmask(uint8_t bit_cnt)
  * information is defined by a 4-bit label, and the length of the following data
  * is known. If the number of required bits for labels & data fields exeeds 28,
  * coding continues without interruption in the next block.
- * The first label starts at Y11 and is followed immediately by the assiciated data.
+ * The first label starts at Y11 and is followed immediately by the associated data.
  * The optional bit blocks are represented by an array of 4 uint32_t vars in the
  * v4l2_rds_tmc_msg struct (uint32_t optional[4]). The msb of each variable starts
  * at Y11 (bit 11 of block 3) and continues down to Z0 (bit 0 of block 4).
@@ -238,7 +230,7 @@ static struct v4l2_tmc_additional_set *rds_tmc_decode_additional(struct
 		rds_private_state *priv_state)
 {  
 	struct v4l2_rds_tmc_msg *msg = &priv_state->handle.tmc.tmc_msg;
-	struct v4l2_tmc_additional *fields =  malloc(sizeof(fields));
+	struct v4l2_tmc_additional *fields = &priv_state->tmc_additional.fields[0];
 	const uint8_t data_len = 28;	/* used bits in the fields of the
 					 * uint32_t optional array */
 	const uint8_t label_len = 4;	/* fixed length of 1 label */
@@ -248,23 +240,23 @@ static struct v4l2_tmc_additional_set *rds_tmc_decode_additional(struct
 	uint8_t len; 		/* length of next data field to extract */
 	uint8_t o_len;		/* lenght of overhang into next block */
 	uint8_t block_idx = 0;	/* index for current optional block */ 
-	uint8_t field_idx = 0;	/* index for additional field array */
+	
+	uint8_t *field_idx = &priv_state->tmc_additional.size;	/* index
+				 * for additional field array */
 	/* LUT for the length of additional data blocks as defined in 
 	 * ISO 14819-1 sect. 5.5.1 */
 	static const uint8_t additional_lut[16] = {
 		3, 3, 5, 5, 5, 8, 8, 8, 8, 11, 16, 16, 16, 16, 0, 0
 	};
 
-	/* free the space allocated for the former decode process */
-	if (priv_state->tmc_additional.fields) 
-		free(priv_state->tmc_additional.fields);
-	priv_state->tmc_additional.fields = fields;
-	priv_state->tmc_additional.size = 0;
+	/* reset the additional information from previous messages */
+	*field_idx = 0;
+	memset(fields, 0, sizeof(*fields));
 
 	/* decode each received optional block */
 	for (int i=0; i < msg->length; i++) {
 		/* extract the label, handle situation where label is split
-		 * across two adjecent RDS-TMC groups */ 
+		 * across two adjacent RDS-TMC groups */ 
 		if (pos + label_len > data_len) {
 			o_len = label_len - (data_len - pos);	/* overhang length */
 			len = data_len - pos;	/* remaining data in current block*/
@@ -285,7 +277,7 @@ static struct v4l2_tmc_additional_set *rds_tmc_decode_additional(struct
 		}
 
 		/* extract the associated data block, handle situation where it
-		 * is split across two adjecent RDS-TMC groups */
+		 * is split across two adjacent RDS-TMC groups */
 		len = additional_lut[label];	/* length of data block */
 		if (pos + len > data_len) {
 			o_len = len - (data_len - pos);	/* overhang length */
@@ -304,17 +296,14 @@ static struct v4l2_tmc_additional_set *rds_tmc_decode_additional(struct
 			block_idx = (pos == 0) ? block_idx+1 : block_idx; 
 		}
 
-		/* if  the label wasn't a separator or "reserved for future
-		 * use", store the extracted additional information by adding
-		 * one field to the dynamic array */
-		if (label == 14 || label == 15) {
+		/* if  the label is not "reserved for future use", store 
+		 * the extracted additional information */
+		if (label == 15) {
 			continue;
 		}
-		fields = realloc(fields, field_idx+1*sizeof(fields));
-		fields[field_idx].label = label;
-		fields[field_idx].data = data;
-		field_idx += 1;
-		priv_state->tmc_additional.size += 1;
+		fields[*field_idx].label = label;
+		fields[*field_idx].data = data;
+		*field_idx +=1;
 	}
 	return &priv_state->tmc_additional;
 }
@@ -341,9 +330,9 @@ static uint32_t rds_decode_tmc_system(struct rds_private_state *priv_state)
 		tmc->ltn = (((group->data_c_msb & 0x0f) << 2)) |
 			(group->data_c_lsb >> 6);
 		/* bit 5 of block 3 contains the AFI */
-		tmc->afi = (bool)group->data_c_lsb & 0x20;
+		tmc->afi = group->data_c_lsb & 0x20;
 		/* bit 4 of block 3 contains the Mode */
-		tmc->enhanced_mode = (bool)group->data_c_lsb & 0x10;
+		tmc->enhanced_mode = group->data_c_lsb & 0x10;
 		/* bits 0-3 of block 3 contain the MGS */
 		tmc->mgs = group->data_c_lsb & 0x0f;
 		break;
@@ -925,7 +914,7 @@ static uint32_t rds_decode_group8(struct rds_private_state *priv_state)
 		priv_state->prev_tmc_group = priv_state->rds_group;
 		return 0x00;
 	}
-	/* modify the old group, to prevent that th same TMC message is decoded
+	/* modify the old group, to prevent that the same TMC message is decoded
 	 * again in the next iteration (the default number of repetitions for
 	 * RDS-TMC groups is 3) */
 	priv_state->prev_tmc_group.group_version = 0x00;
@@ -1045,11 +1034,6 @@ void v4l2_rds_destroy(struct v4l2_rds *handle)
 {
 	struct rds_private_state *priv_state = (struct rds_private_state*) handle;
 	if (handle) {
-		/* tmc additional is dynamically allocated memory structure
-		 * with a variable size that needs to be free manually */
-		if (priv_state->tmc_additional.fields) {
-			free(priv_state->tmc_additional.fields);
-		}
 		free(handle);
 	}
 }

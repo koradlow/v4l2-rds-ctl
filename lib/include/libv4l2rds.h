@@ -165,13 +165,16 @@ struct v4l2_tmc_additional {
  * the fly, giving the user easy access to optional data fields */
 struct v4l2_tmc_additional_set {
 	uint8_t size;
-	struct v4l2_tmc_additional *fields;
+	/* 28 is the maximal possible number of fields. Additional data
+	 * is limited to 112 bit, and the smallest optional message has
+	 * a size of 4 bit (4 bit identifier + 0 bits of data) */
+	struct v4l2_tmc_additional fields[28];
 };
  
-/* struct to encapsule a decoded TMC message with optional undecoded
+/* struct to encapsulate a decoded TMC message with optional un-decoded
  * subsequent groups to store multi-group TMC messages */
 struct v4l2_rds_tmc_msg {
-	uint8_t length;	/* lenght of multi-group message (0..4) */
+	uint8_t length;	/* length of multi-group message (0..4) */
 	uint8_t sid;		/* service identifier at time of reception */
 	uint8_t extent;
 	uint8_t dp;		/* duration and persistence */
@@ -183,7 +186,7 @@ struct v4l2_rds_tmc_msg {
 	uint32_t optional[4];	/* 112 bits of optional additional data */
 };
 
-/* struct to encapsule all TMC related information, including TMC System
+/* struct to encapsulate all TMC related information, including TMC System
  * Information, TMC Tuning information and a buffer for the last N decoded
  * TMC messages */
 struct v4l2_rds_tmc {
@@ -278,13 +281,13 @@ LIBV4L_PUBLIC const char *v4l2_rds_get_coverage_str(const struct v4l2_rds *handl
 
 /* returns a pointer to the last decoded RDS group, in order to give raw
  * access to RDS data if it is required (e.g. ODA decoding) */
-LIBV4L_PUBLIC const struct v4l2_rds_group *v4l2_rds_get_group
-	(const struct v4l2_rds *handle);
+LIBV4L_PUBLIC const struct v4l2_rds_group 
+	*v4l2_rds_get_group(const struct v4l2_rds *handle);
 
 /* decodes the additional information of a RDS-TMC message into a easily 
  * accessable form */
-LIBV4L_PUBLIC const struct v4l2_tmc_additional_set *v4l2_rds_tmc_get_additional\
-	(const struct v4l2_rds *handle);
+LIBV4L_PUBLIC const struct v4l2_tmc_additional_set
+	*v4l2_rds_tmc_get_additional(const struct v4l2_rds *handle);
 
 #ifdef __cplusplus
 }
