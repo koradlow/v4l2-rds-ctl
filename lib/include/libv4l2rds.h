@@ -184,6 +184,10 @@ struct v4l2_rds_tmc_msg {
 				 * follow the diversion */
 	bool neg_direction;	/* indicates negative / positive direction */ 
 	uint32_t optional[4];	/* 112 bits of optional additional data */
+
+	/* decoded additional information, contained in optional field of
+	 * multi-group messages */
+	struct v4l2_tmc_additional_set additional;
 };
 
 /* struct to encapsulate all TMC related information, including TMC System
@@ -284,10 +288,6 @@ LIBV4L_PUBLIC const char *v4l2_rds_get_coverage_str(const struct v4l2_rds *handl
 LIBV4L_PUBLIC const struct v4l2_rds_group 
 	*v4l2_rds_get_group(const struct v4l2_rds *handle);
 
-/* decodes the additional information of a RDS-TMC message into a easily 
- * accessable form */
-LIBV4L_PUBLIC const struct v4l2_tmc_additional_set
-	*v4l2_rds_tmc_get_additional(const struct v4l2_rds *handle);
 
 #ifdef __cplusplus
 }

@@ -64,10 +64,6 @@ struct rds_private_state {
 	struct v4l2_rds_group prev_tmc_sys_group;
 	struct v4l2_rds_tmc_msg new_tmc_msg;
 
-	/* additional TMC information fields, containing a dynamic array
-	 * that needs to be freed manually */
-	struct v4l2_tmc_additional_set tmc_additional;
-
 	/* buffers for rds data, before group type specific decoding can
 	 * be done */
 	struct v4l2_rds_group rds_group;
@@ -230,7 +226,7 @@ static struct v4l2_tmc_additional_set *rds_tmc_decode_additional(struct
 		rds_private_state *priv_state)
 {  
 	struct v4l2_rds_tmc_msg *msg = &priv_state->handle.tmc.tmc_msg;
-	struct v4l2_tmc_additional *fields = &priv_state->tmc_additional.fields[0];
+	struct v4l2_tmc_additional *fields = &msg->additional.fields[0];
 	const uint8_t data_len = 28;	/* used bits in the fields of the
 					 * uint32_t optional array */
 	const uint8_t label_len = 4;	/* fixed length of 1 label */
@@ -240,9 +236,9 @@ static struct v4l2_tmc_additional_set *rds_tmc_decode_additional(struct
 	uint8_t len; 		/* length of next data field to extract */
 	uint8_t o_len;		/* lenght of overhang into next block */
 	uint8_t block_idx = 0;	/* index for current optional block */ 
-	
-	uint8_t *field_idx = &priv_state->tmc_additional.size;	/* index
-				 * for additional field array */
+
+	uint8_t *field_idx = &msg->additional.size;	/* index for 
+				 * additional field array */
 	/* LUT for the length of additional data blocks as defined in 
 	 * ISO 14819-1 sect. 5.5.1 */
 	static const uint8_t additional_lut[16] = {
@@ -305,7 +301,7 @@ static struct v4l2_tmc_additional_set *rds_tmc_decode_additional(struct
 		fields[*field_idx].data = data;
 		*field_idx +=1;
 	}
-	return &priv_state->tmc_additional;
+	return &msg->additional;
 }
 
 /* decode the TMC system information that is contained in type 3A groups
@@ -378,7 +374,9 @@ static uint32_t rds_decode_tmc_single_group(struct rds_private_state *priv_state
 
 	/* decoding done, store the new message */
 	priv_state->handle.tmc.tmc_msg = msg;
-
+	priv_state->handle.valid_fields |= V4L2_RDS_TMC_SG;
+	priv_state->handle.valid_fields &= ~V4L2_RDS_TMC_MG;
+	
 	return V4L2_RDS_TMC_SG;
 }
 
@@ -445,6 +443,9 @@ static uint32_t rds_decode_tmc_multi_group(struct rds_private_state *priv_state)
 	/* decoding done, store the new message */
 	if (message_completed) {
 		priv_state->handle.tmc.tmc_msg = *msg;
+		rds_tmc_decode_additional(priv_state);
+		priv_state->handle.valid_fields |= V4L2_RDS_TMC_MG;
+		priv_state->handle.valid_fields &= ~V4L2_RDS_TMC_SG;
 	}
 
 	return V4L2_RDS_TMC_MG;
@@ -1032,7 +1033,6 @@ struct v4l2_rds *v4l2_rds_create(bool is_rbds)
 
 void v4l2_rds_destroy(struct v4l2_rds *handle)
 {
-	struct rds_private_state *priv_state = (struct rds_private_state*) handle;
 	if (handle) {
 		free(handle);
 	}

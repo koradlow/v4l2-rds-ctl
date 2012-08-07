@@ -498,7 +498,7 @@ static void print_decoder_info(uint8_t di)
 static void print_rds_tmc(const struct v4l2_rds *handle, uint32_t updated_fields)
 {
 	const struct v4l2_rds_tmc_msg *msg = &handle->tmc.tmc_msg;
-	const struct v4l2_tmc_additional_set *set;
+	const struct v4l2_tmc_additional_set *set = &msg->additional;
 
 	if (updated_fields & V4L2_RDS_TMC_SG) {
 		printf("\nTMC Single-grp: location: %04x, event: %04x, extent: %02x "
@@ -510,7 +510,6 @@ static void print_rds_tmc(const struct v4l2_rds *handle, uint32_t updated_fields
 		printf("\nTMC Multi-grp: length: %02d, location: %04x, event: %04x,\n"
 		"               extent: %02x duration: %02x", msg->length, msg->location, msg->event,
 			msg->extent, msg->dp);
-		set = v4l2_rds_tmc_get_additional(handle);
 		for (int i = 0; i < set->size; i++) {
 			printf("\n               additional[%02d]: label: %02d, value: %04x",
 			i, set->fields[i].label, set->fields[i].data);
