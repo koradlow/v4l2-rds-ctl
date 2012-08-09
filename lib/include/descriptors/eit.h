@@ -19,54 +19,69 @@
  *
  */
 
-#ifndef _SDT_H
-#define _SDT_H
+#ifndef _EIT_H
+#define _EIT_H
 
 #include <stdint.h>
 #include <unistd.h> /* ssize_t */
+#include <time.h>
 
 #include "descriptors/header.h"
 #include "descriptors.h"
 
-#define DVB_TABLE_SDT      0x42
-#define DVB_TABLE_SDT_PID  0x11
+#define DVB_TABLE_EIT        0x4E
+#define DVB_TABLE_EIT_OTHER  0x4F
 
-struct dvb_table_sdt_service {
-	uint16_t service_id;
-	uint8_t EIT_present_following:1;
-	uint8_t EIT_schedule:1;
-	uint8_t reserved:6;
+#define DVB_TABLE_EIT_SCHEDULE 0x50       /* - 0x5F */
+#define DVB_TABLE_EIT_SCHEDULE_OTHER 0x60 /* - 0x6F */
+
+#define DVB_TABLE_EIT_PID  0x12
+
+struct dvb_table_eit_event {
+	uint16_t event_id;
 	union {
 		uint16_t bitfield;
+		uint8_t dvbstart[5];
+	} __attribute__((packed));
+	uint8_t dvbduration[3];
+	union {
+		uint16_t bitfield2;
 		struct {
 			uint16_t section_length:12;
 			uint16_t free_CA_mode:1;
 			uint16_t running_status:3;
 		} __attribute__((packed));
-	};
+	} __attribute__((packed));
 	struct dvb_desc *descriptor;
-	struct dvb_table_sdt_service *next;
+	struct dvb_table_eit_event *next;
+	struct tm start;
+	uint32_t duration;
 } __attribute__((packed));
 
-struct dvb_table_sdt {
+struct dvb_table_eit {
 	struct dvb_table_header header;
+	uint16_t transport_id;
 	uint16_t network_id;
-	uint8_t  reserved;
-	struct dvb_table_sdt_service *service;
+	uint8_t  last_segment;
+	uint8_t  last_table_id;
+	struct dvb_table_eit_event *event;
 } __attribute__((packed));
 
-#define dvb_sdt_service_foreach(_service, _sdt) \
-	for( struct dvb_table_sdt_service *_service = _sdt->service; _service; _service = _service->next ) \
+#define dvb_eit_event_foreach(_event, _eit) \
+	for( struct dvb_table_eit_event *_event = _eit->event; _event; _event = _event->next ) \
 
 struct dvb_v5_fe_parms;
+
+extern const char *dvb_eit_running_status_name[8];
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void dvb_table_sdt_init (struct dvb_v5_fe_parms *parms, const uint8_t *buf, ssize_t buflen, uint8_t *table, ssize_t *table_length);
-void dvb_table_sdt_free(struct dvb_table_sdt *sdt);
-void dvb_table_sdt_print(struct dvb_v5_fe_parms *parms, struct dvb_table_sdt *sdt);
+void dvb_table_eit_init (struct dvb_v5_fe_parms *parms, const uint8_t *buf, ssize_t buflen, uint8_t *table, ssize_t *table_length);
+void dvb_table_eit_free(struct dvb_table_eit *eit);
+void dvb_table_eit_print(struct dvb_v5_fe_parms *parms, struct dvb_table_eit *eit);
+void dvb_time(const uint8_t data[5], struct tm *tm);
 
 #ifdef __cplusplus
 }

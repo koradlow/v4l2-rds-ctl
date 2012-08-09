@@ -31,7 +31,7 @@
 #define DVB_TABLE_PAT_PID  0
 
 struct dvb_table_pat_program {
-	uint16_t program_id;
+	uint16_t service_id;
 	union {
 		uint16_t bitfield;
 		struct {
@@ -47,13 +47,18 @@ struct dvb_table_pat {
 	struct dvb_table_pat_program program[];
 } __attribute__((packed));
 
+#define dvb_pat_program_foreach(_program, _pat) \
+	struct dvb_table_pat_program *_program; \
+	for(int _i = 0; _i < _pat->programs && (_program = _pat->program + _i); _i++) \
+
 struct dvb_v5_fe_parms;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void dvb_table_pat_init (struct dvb_v5_fe_parms *parms, const uint8_t *ptr, ssize_t size, uint8_t **buf, ssize_t *buflen);
+void dvb_table_pat_init (struct dvb_v5_fe_parms *parms, const uint8_t *buf, ssize_t buflen, uint8_t *table, ssize_t *table_length);
+void dvb_table_pat_free(struct dvb_table_pat *pat);
 void dvb_table_pat_print(struct dvb_v5_fe_parms *parms, struct dvb_table_pat *t);
 
 #ifdef __cplusplus
