@@ -243,7 +243,7 @@ struct v4l2_rds {
 	uint8_t di;		/* Decoder Information */
 	uint8_t ecc;		/* Extended Country Code */
 	uint8_t lc;		/* Language Code */
-	time_t time;		/* Time and Date of transmission */
+	time_t time;		/* local time and date of transmission */
 
 	struct v4l2_rds_statistics rds_statistics;
 	struct v4l2_rds_oda_set rds_oda;	/* Open Data Services */
