@@ -202,7 +202,7 @@ LIBV4L_PUBLIC uint32_t v4l2_rds_add(struct v4l2_rds *handle, struct v4l2_rds_dat
  * group of functions to translate numerical RDS data into strings
  *
  * return program description string defined in the RDS/RBDS Standard
- * ! return value deepens on selected Standard !*/
+ * ! return value depends on selected Standard !*/
 LIBV4L_PUBLIC const char *v4l2_rds_get_pty_str(const struct v4l2_rds *handle);
 LIBV4L_PUBLIC const char *v4l2_rds_get_language_str(const struct v4l2_rds *handle);
 LIBV4L_PUBLIC const char *v4l2_rds_get_country_str(const struct v4l2_rds *handle);
