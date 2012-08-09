@@ -20,17 +20,9 @@
 #ifndef __LIBV4L2RDS
 #define __LIBV4L2RDS
 
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+
 #include <stdbool.h>
-#include <unistd.h>
 #include <stdint.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/mman.h>
-#include <config.h>
 
 #include <linux/videodev2.h>
 

@@ -17,6 +17,16 @@
  * Foundation, Inc., 51 Franklin Street, Suite 500, Boston, MA  02110-1335  USA
  */
 
+#include <errno.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <config.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+
 #include <linux/videodev2.h>
 
 #include "../include/libv4l2rds.h"
