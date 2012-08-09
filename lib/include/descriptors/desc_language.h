@@ -19,8 +19,8 @@
  *
  */
 
-#ifndef _LANGUAGE_H
-#define _LANGUAGE_H
+#ifndef _DESC_LANGUAGE_H
+#define _DESC_LANGUAGE_H
 
 #include <stdint.h>
 #include <unistd.h> /* ssize_t */
