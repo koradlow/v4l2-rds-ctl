@@ -569,42 +569,21 @@ static void print_rds_data(const struct v4l2_rds *handle, uint32_t updated_field
 
 	if (updated_fields & V4L2_RDS_PS &&
 			handle->valid_fields & V4L2_RDS_PS) {
-		printf("\nPS: ");
-		for (int i = 0; i < 8; ++i) {
-			/* filter out special characters */
-			if (handle->ps[i] >= 0x20 && handle->ps[i] <= 0x7E)
-				printf("%lc",handle->ps[i]);
-			else
-				printf(" ");
-		}
+		printf("\nPS: %s", handle->ps);
 	}
 
 	if (updated_fields & V4L2_RDS_PTY && handle->valid_fields & V4L2_RDS_PTY)
 		printf("\nPTY: %0u -> %s",handle->pty, v4l2_rds_get_pty_str(handle));
 
 	if (updated_fields & V4L2_RDS_PTYN && handle->valid_fields & V4L2_RDS_PTYN) {
-		printf("\nPTYN: ");
-		for (int i = 0; i < 8; ++i) {
-			/* filter out special characters */
-			if (handle->ptyn[i] >= 0x20 && handle->ptyn[i] <= 0x7E)
-				printf("%lc",handle->ptyn[i]);
-			else
-				printf(" ");
-		}
+		printf("\nPTYN: %s", handle->ptyn);
 	}
 
 	if (updated_fields & V4L2_RDS_TIME) {
 		printf("\nTime: %s", ctime(&handle->time));
 	}
 	if (updated_fields & V4L2_RDS_RT && handle->valid_fields & V4L2_RDS_RT) {
-		printf("\nRT: ");
-		for (int i = 0; i < handle->rt_length; ++i) {
-			/* filter out special characters */
-			if (handle->rt[i] >= 0x20 && handle->rt[i] <= 0x7E)
-				printf("%lc",handle->rt[i]);
-			else
-				printf(" ");
-		}
+		printf("\nRT: %s", handle->rt);
 	}
 
 	if (updated_fields & V4L2_RDS_TP && handle->valid_fields & V4L2_RDS_TP)
