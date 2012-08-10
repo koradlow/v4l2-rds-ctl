@@ -207,8 +207,6 @@ struct v4l2_rds_tmc {
 /* This is the structure that will be used by external applications, to
  * communicate with the library and get access to RDS data */
 struct v4l2_rds {
-	uint32_t version;	/* version number of this structure */
-
 	/** state information **/
 	uint32_t decode_information;	/* state of decoding process */
 	uint32_t valid_fields;		/* currently valid info fields
