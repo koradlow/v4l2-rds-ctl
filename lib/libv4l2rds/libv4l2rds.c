@@ -63,12 +63,12 @@ struct rds_private_state {
 	uint8_t utc_minute;
 	uint8_t utc_offset;
 
-	/* TMC decoding buffers, to store rds data before it can be verified,
-	 * and before complete multi-group messages have been received */
+	/* TMC decoding buffers, to store data before it can be verified,
+	 * and before all parts of a multi-group message have been received */
 	uint8_t continuity_id;	/* continuity index of current TMC multigroup */
 	uint8_t grp_seq_id; 	/* group sequence identifier */
-	uint32_t optional_tmc[4];	/* 112 bits of optional additional
-					 * data storing multi-group 
+	uint32_t optional_tmc[4];	/* buffer for up to 112 bits of optional
+					 * additional data in multi-group 
 					 * messages */
 
 	/* TMC groups are only accepted if the same data was received twice,
@@ -195,9 +195,9 @@ static void rds_decode_d(struct rds_private_state *priv_state, struct v4l2_rds_d
 	grp->data_d_lsb = rds_data->lsb;
 }
 
-/* compare two rds-groups field per field, used for decoding RDS-TMC, which 
- * has the requirement that the same group is at least received twice in
- * order to accept the transmission */
+/* compare two rds-groups for equality */ 
+/* used for decoding RDS-TMC, which has the requirement that the same group
+ * is at least received twice before it is accepted */
 static bool rds_compare_group(const struct v4l2_rds_group *a,
 				const struct v4l2_rds_group *b)
 {
@@ -218,7 +218,7 @@ static bool rds_compare_group(const struct v4l2_rds_group *a,
 	return true;
 }
 
-/* returns a bitmask with with number of bits set to 1 and all others to 0 */
+/* return a bitmask with with bit_cnt bits set to 1 (starting from lsb) */
 static uint32_t get_bitmask(uint8_t bit_cnt)
 {
 	return (1 << bit_cnt) - 1;
@@ -232,8 +232,8 @@ static uint32_t get_bitmask(uint8_t bit_cnt)
  * coding continues without interruption in the next block.
  * The first label starts at Y11 and is followed immediately by the associated data.
  * The optional bit blocks are represented by an array of 4 uint32_t vars in the
- * v4l2_rds_tmc_msg struct (uint32_t optional[4]). The msb of each variable starts
- * at Y11 (bit 11 of block 3) and continues down to Z0 (bit 0 of block 4).
+ * rds_private_state struct. The msb of each variable starts at Y11 (bit 11 of 
+ * block 3) and continues down to Z0 (bit 0 of block 4).
  * The 4 lsb bits are not used (=0) */
 static struct v4l2_tmc_additional_set *rds_tmc_decode_additional(struct 
 		rds_private_state *priv_state)
@@ -243,14 +243,13 @@ static struct v4l2_tmc_additional_set *rds_tmc_decode_additional(struct
 	uint32_t *optional = priv_state->optional_tmc;
 	const uint8_t data_len = 28;	/* used bits in the fields of the
 					 * uint32_t optional array */
-	const uint8_t label_len = 4;	/* fixed length of 1 label */
+	const uint8_t label_len = 4;	/* fixed length of a label */
 	uint8_t label;		/* buffer for extracted label */
 	uint16_t data;		/* buffer for extracted data */
 	uint8_t pos = 0;	/* current position in optional block */
-	uint8_t len; 		/* length of next data field to extract */
+	uint8_t len; 		/* length of next data field to be extracted */
 	uint8_t o_len;		/* lenght of overhang into next block */
 	uint8_t block_idx = 0;	/* index for current optional block */ 
-
 	uint8_t *field_idx = &msg->additional.size;	/* index for 
 				 * additional field array */
 	/* LUT for the length of additional data blocks as defined in 
@@ -366,8 +365,7 @@ static uint32_t rds_decode_tmc_system(struct rds_private_state *priv_state)
 	return V4L2_RDS_TMC_SYS;
 }
 
-/* decode a single group TMC message and try to add it to the TMC message
- * buffer if it doesn't exist already */
+/* decode a single group TMC message */
 static uint32_t rds_decode_tmc_single_group(struct rds_private_state *priv_state)
 {
 	struct v4l2_rds_group *grp = &priv_state->rds_group;
@@ -394,8 +392,8 @@ static uint32_t rds_decode_tmc_single_group(struct rds_private_state *priv_state
 	return V4L2_RDS_TMC_SG;
 }
 
-/* decode a multi group TMC message and try to add it to the TMC message 
- * buffer once the complete multi group has been received */ 
+/* decode a multi group TMC message and decode the additional fields once
+ * a complete group was decoded */
 static uint32_t rds_decode_tmc_multi_group(struct rds_private_state *priv_state)
 {
 	struct v4l2_rds_group *grp = &priv_state->rds_group;
@@ -455,7 +453,8 @@ static uint32_t rds_decode_tmc_multi_group(struct rds_private_state *priv_state)
 			message_completed = true;
 	}
 
-	/* decoding done, store the new message */
+	/* complete message received -> decode additional fields and store 
+	 * the new message */
 	if (message_completed) {
 		priv_state->handle.tmc.tmc_msg = *msg;
 		rds_tmc_decode_additional(priv_state);

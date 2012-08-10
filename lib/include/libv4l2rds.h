@@ -152,9 +152,7 @@ struct v4l2_tmc_additional {
 };
 
 /* struct to encapsulate an arbitrary number of additional data fields
- * belonging to one TMC message.
- * Decoding of raw additional data into this data structure is done on 
- * the fly, giving the user easy access to optional data fields */
+ * belonging to one TMC message */
 struct v4l2_tmc_additional_set {
 	uint8_t size;
 	/* 28 is the maximal possible number of fields. Additional data
@@ -163,8 +161,8 @@ struct v4l2_tmc_additional_set {
 	struct v4l2_tmc_additional fields[28];
 };
  
-/* struct to encapsulate a decoded TMC message with optional un-decoded
- * subsequent groups to store multi-group TMC messages */
+/* struct to encapsulate a decoded TMC message with optional additional
+ * data field (in case of a multi-group TMC message) */
 struct v4l2_rds_tmc_msg {
 	uint8_t length;	/* length of multi-group message (0..4) */
 	uint8_t sid;		/* service identifier at time of reception */
@@ -182,7 +180,7 @@ struct v4l2_rds_tmc_msg {
 };
 
 /* struct to encapsulate all TMC related information, including TMC System
- * Information, TMC Tuning information and a buffer for the last N decoded
+ * Information, TMC Tuning information and a buffer for the last decoded
  * TMC messages */
 struct v4l2_rds_tmc {
 	uint8_t ltn;		/* location_table_number */
@@ -274,8 +272,8 @@ LIBV4L_PUBLIC const char *v4l2_rds_get_coverage_str(const struct v4l2_rds *handl
 
 /* returns a pointer to the last decoded RDS group, in order to give raw
  * access to RDS data if it is required (e.g. ODA decoding) */
-LIBV4L_PUBLIC const struct v4l2_rds_group 
-	*v4l2_rds_get_group(const struct v4l2_rds *handle);
+LIBV4L_PUBLIC const struct v4l2_rds_group *v4l2_rds_get_group
+	(const struct v4l2_rds *handle);
 
 
 #ifdef __cplusplus
