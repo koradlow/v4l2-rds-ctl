@@ -1037,7 +1037,6 @@ struct v4l2_rds *v4l2_rds_create(bool is_rbds)
 {
 	struct rds_private_state *internal_handle =
 		calloc(1, sizeof(struct rds_private_state));
-	internal_handle->handle.version = V4L2_RDS_VERSION;
 	internal_handle->handle.is_rbds = is_rbds;
 
 	return (struct v4l2_rds *)internal_handle;
