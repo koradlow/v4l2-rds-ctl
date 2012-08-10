@@ -67,6 +67,9 @@ struct rds_private_state {
 	 * and before complete multi-group messages have been received */
 	uint8_t continuity_id;	/* continuity index of current TMC multigroup */
 	uint8_t grp_seq_id; 	/* group sequence identifier */
+	uint32_t optional_tmc[4];	/* 112 bits of optional additional
+					 * data storing multi-group 
+					 * messages */
 
 	/* TMC groups are only accepted if the same data was received twice,
 	 * these structs are used as receive buffers to validate TMC groups */
@@ -237,6 +240,7 @@ static struct v4l2_tmc_additional_set *rds_tmc_decode_additional(struct
 {  
 	struct v4l2_rds_tmc_msg *msg = &priv_state->handle.tmc.tmc_msg;
 	struct v4l2_tmc_additional *fields = &msg->additional.fields[0];
+	uint32_t *optional = priv_state->optional_tmc;
 	const uint8_t data_len = 28;	/* used bits in the fields of the
 					 * uint32_t optional array */
 	const uint8_t label_len = 4;	/* fixed length of 1 label */
@@ -266,14 +270,14 @@ static struct v4l2_tmc_additional_set *rds_tmc_decode_additional(struct
 		if (pos + label_len > data_len) {
 			o_len = label_len - (data_len - pos);	/* overhang length */
 			len = data_len - pos;	/* remaining data in current block*/
-			label = msg->optional[block_idx] >> (32 - pos - len + o_len) &
+			label = optional[block_idx] >> (32 - pos - len + o_len) &
 				get_bitmask(len + o_len);
 			if (++block_idx >= msg->length)
 				break;
 			pos = 0;	/* start at beginning of next block */
-			label |= msg->optional[block_idx] >> (32 - pos - o_len);
+			label |= optional[block_idx] >> (32 - pos - o_len);
 		} else {
-			label = msg->optional[block_idx] >> (32 - pos - label_len) &
+			label = optional[block_idx] >> (32 - pos - label_len) &
 				get_bitmask(label_len);
 			pos += label_len % data_len;
 			/* end of optional block reached? */
@@ -288,14 +292,14 @@ static struct v4l2_tmc_additional_set *rds_tmc_decode_additional(struct
 		if (pos + len > data_len) {
 			o_len = len - (data_len - pos);	/* overhang length */
 			len = data_len - pos;	/* remaining data in current block*/
-			data = msg->optional[block_idx] >> (32 - pos - len + o_len) &
+			data = optional[block_idx] >> (32 - pos - len + o_len) &
 				get_bitmask(len + o_len);
 			if (++block_idx >= msg->length)
 				break;
 			pos = 0;	/* start at beginning of next block */
-			label |= msg->optional[block_idx] >> (32 - pos - o_len);
+			label |= optional[block_idx] >> (32 - pos - o_len);
 		} else {
-			data = msg->optional[block_idx] >> (32 - pos - len) &
+			data = optional[block_idx] >> (32 - pos - len) &
 				get_bitmask(len);
 			data += len % data_len;
 			/* end of optional block reached? */
@@ -396,6 +400,7 @@ static uint32_t rds_decode_tmc_multi_group(struct rds_private_state *priv_state)
 {
 	struct v4l2_rds_group *grp = &priv_state->rds_group;
 	struct v4l2_rds_tmc_msg *msg = &priv_state->new_tmc_msg;
+	uint32_t *optional = priv_state->optional_tmc;
 	bool message_completed = false;
 	uint8_t grp_seq_id; 
 	uint64_t buffer; 
@@ -431,7 +436,7 @@ static uint32_t rds_decode_tmc_multi_group(struct rds_private_state *priv_state)
 		/* store group for later decoding */
 		buffer = grp->data_c_msb << 28 | grp->data_c_lsb << 20 |
 			grp->data_d_msb << 12 | grp->data_d_lsb << 4;
-		msg->optional[0] = buffer; 
+		optional[0] = buffer; 
 		msg->length = 1;
 		if (grp_seq_id == 0)
 			message_completed = true;
@@ -445,7 +450,7 @@ static uint32_t rds_decode_tmc_multi_group(struct rds_private_state *priv_state)
 		/* store group for later decoding */
 		buffer = grp->data_c_msb << 28 | grp->data_c_lsb << 20 |
 			grp->data_d_msb << 12 | grp->data_d_lsb << 4;
-		msg->optional[msg->length++] = buffer;
+		optional[msg->length++] = buffer;
 		if (grp_seq_id == 0)
 			message_completed = true;
 	}
@@ -1044,9 +1049,8 @@ struct v4l2_rds *v4l2_rds_create(bool is_rbds)
 
 void v4l2_rds_destroy(struct v4l2_rds *handle)
 {
-	if (handle) {
+	if (handle)
 		free(handle);
-	}
 }
 
 void v4l2_rds_reset(struct v4l2_rds *handle, bool reset_statistics)
@@ -1290,15 +1294,7 @@ const char *v4l2_rds_get_coverage_str(const struct v4l2_rds *handle)
 	return coverage_lut[coverage];
 }
 
-const struct v4l2_tmc_additional_set *v4l2_rds_tmc_get_additional (const struct 
-		v4l2_rds *handle)
-{
-	struct rds_private_state *priv_state = (struct rds_private_state *) handle;
-	return rds_tmc_decode_additional(priv_state);
-}
-
-const struct v4l2_rds_group *v4l2_rds_get_group
-	(const struct v4l2_rds *handle)
+const struct v4l2_rds_group *v4l2_rds_get_group(const struct v4l2_rds *handle)
 {
 	struct rds_private_state *priv_state = (struct rds_private_state *) handle;
 	return &priv_state->rds_group;

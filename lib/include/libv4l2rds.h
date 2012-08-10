@@ -152,13 +152,13 @@ struct v4l2_tmc_additional {
 };
 
 /* struct to encapsulate an arbitrary number of additional data fields
- * belonging to one TMC message
- * decoding of raw additional data into this data structure is done on 
+ * belonging to one TMC message.
+ * Decoding of raw additional data into this data structure is done on 
  * the fly, giving the user easy access to optional data fields */
 struct v4l2_tmc_additional_set {
 	uint8_t size;
 	/* 28 is the maximal possible number of fields. Additional data
-	 * is limited to 112 bit, and the smallest optional message has
+	 * is limited to 112 bit, and the smallest optional tuple has
 	 * a size of 4 bit (4 bit identifier + 0 bits of data) */
 	struct v4l2_tmc_additional fields[28];
 };
@@ -175,10 +175,9 @@ struct v4l2_rds_tmc_msg {
 	bool follow_diversion;	/* indicates if the driver is adviced to
 				 * follow the diversion */
 	bool neg_direction;	/* indicates negative / positive direction */ 
-	uint32_t optional[4];	/* 112 bits of optional additional data */
-
-	/* decoded additional information, contained in optional field of
-	 * multi-group messages */
+	
+	/* decoded additional information (only available in multi-group
+	 * messages) */
 	struct v4l2_tmc_additional_set additional;
 };
 
