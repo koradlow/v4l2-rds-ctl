@@ -83,7 +83,7 @@ extern "C" {
  * used to extract TMC fields from RDS groups */
 #define V4L2_TMC_TUNING_INFO	0x08
 #define V4L2_TMC_SINGLE_GROUP	0x04
- 
+
 /* struct to encapsulate one complete RDS group */
 /* This structure is used internally to store data until a complete RDS
  * group was received and group id dependent decoding can be done.
@@ -160,7 +160,7 @@ struct v4l2_tmc_additional_set {
 	 * a size of 4 bit (4 bit identifier + 0 bits of data) */
 	struct v4l2_tmc_additional fields[28];
 };
- 
+
 /* struct to encapsulate a decoded TMC message with optional additional
  * data field (in case of a multi-group TMC message) */
 struct v4l2_rds_tmc_msg {
@@ -172,8 +172,8 @@ struct v4l2_rds_tmc_msg {
 	uint16_t location;	/* TMC event location */
 	bool follow_diversion;	/* indicates if the driver is adviced to
 				 * follow the diversion */
-	bool neg_direction;	/* indicates negative / positive direction */ 
-	
+	bool neg_direction;	/* indicates negative / positive direction */
+
 	/* decoded additional information (only available in multi-group
 	 * messages) */
 	struct v4l2_tmc_additional_set additional;
@@ -185,9 +185,9 @@ struct v4l2_rds_tmc_msg {
 struct v4l2_rds_tmc {
 	uint8_t ltn;		/* location_table_number */
 	bool afi;		/* alternative frequency indicator */
-	bool enhanced_mode;	/* mode of transmission, 
+	bool enhanced_mode;	/* mode of transmission,
 				 * if false -> basic => gaps between tmc groups
-				 * gap defines timing behavior 
+				 * gap defines timing behavior
 				 * if true -> enhanced => t_a, t_w and t_d
 				 * define timing behavior of tmc groups */
 	uint8_t mgs;		/* message geographical scope */
