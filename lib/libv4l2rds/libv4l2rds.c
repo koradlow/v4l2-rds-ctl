@@ -67,9 +67,10 @@ struct rds_private_state {
 	 * and before all parts of a multi-group message have been received */
 	uint8_t continuity_id;	/* continuity index of current TMC multigroup */
 	uint8_t grp_seq_id; 	/* group sequence identifier */
-	uint32_t optional_tmc[4];	/* buffer for up to 112 bits of optional
-					 * additional data in multi-group
-					 * messages */
+	bool optional_tmc[112];	/* buffer for up to 112 bits of optional
+				 * additional data in multi-group
+				 * messages (112 is the maximal possible length
+				 * specified by the standard) */
 
 	/* TMC groups are only accepted if the same data was received twice,
 	 * these structs are used as receive buffers to validate TMC groups */
@@ -218,37 +219,21 @@ static bool rds_compare_group(const struct v4l2_rds_group *a,
 	return true;
 }
 
-/* return a bitmask with with bit_cnt bits set to 1 (starting from lsb) */
-static uint32_t get_bitmask(uint8_t bit_cnt)
-{
-	return (1 << bit_cnt) - 1;
-}
-
 /* decode additional information of a TMC message into handy representation */
 /* the additional information of TMC messages is submitted in (up to) 4 blocks of
- * 28 bits each, which are to be treated as a consecutive bit-array. Each additional
- * information is defined by a 4-bit label, and the length of the following data
- * is known. If the number of required bits for labels & data fields exeeds 28,
- * coding continues without interruption in the next block.
- * The first label starts at Y11 and is followed immediately by the associated data.
- * The optional bit blocks are represented by an array of 4 uint32_t vars in the
- * rds_private_state struct. The msb of each variable starts at Y11 (bit 11 of
- * block 3) and continues down to Z0 (bit 0 of block 4).
- * The 4 lsb bits are not used (=0) */
+ * 28 bits each, which are to be treated as a consecutive bit-array. This data
+ * is represented by the optional_tmc array in the private handle, where each
+ * value represents 1 bit. Each additional information set is defined by a 4-bit
+ * label, and an associated data field for which the length is known */ 
 void rds_tmc_decode_additional(struct rds_private_state *priv_state)
 {
 	struct v4l2_rds_tmc_msg *msg = &priv_state->handle.tmc.tmc_msg;
 	struct v4l2_tmc_additional *fields = &msg->additional.fields[0];
-	uint32_t *optional = priv_state->optional_tmc;
-	const uint8_t data_len = 28;	/* used bits in the fields of the
-					 * uint32_t optional array */
 	const uint8_t label_len = 4;	/* fixed length of a label */
+	uint8_t len; 		/* length of next data field to be extracted */
 	uint8_t label;		/* buffer for extracted label */
 	uint16_t data;		/* buffer for extracted data */
-	uint8_t pos = 0;	/* current position in optional block */
-	uint8_t len; 		/* length of next data field to be extracted */
-	uint8_t o_len;		/* lenght of overhang into next block */
-	uint8_t block_idx = 0;	/* index for current optional block */
+	uint8_t array_idx = 0;	/* index for optional_tmc array */
 	uint8_t *field_idx = &msg->additional.size;	/* index for
 				 * additional field array */
 	/* LUT for the length of additional data blocks as defined in
@@ -261,54 +246,29 @@ void rds_tmc_decode_additional(struct rds_private_state *priv_state)
 	*field_idx = 0;
 	memset(fields, 0, sizeof(*fields));
 
-	/* decode each received optional block */
-	for (int i = 0; i < msg->length; i++) {
-		/* extract the label, handle situation where label is split
-		 * across two adjacent RDS-TMC groups */
-		if (pos + label_len > data_len) {
-			o_len = label_len - (data_len - pos);	/* overhang length */
-			len = data_len - pos;	/* remaining data in current block*/
-			label = optional[block_idx] >> (32 - pos - len + o_len) &
-				get_bitmask(len + o_len);
-			if (++block_idx >= msg->length)
-				break;
-			pos = 0;	/* start at beginning of next block */
-			label |= optional[block_idx] >> (32 - pos - o_len);
-		} else {
-			label = optional[block_idx] >> (32 - pos - label_len) &
-				get_bitmask(label_len);
-			pos += label_len % data_len;
-			/* end of optional block reached? */
-			block_idx = (pos == 0) ? block_idx+1 : block_idx;
-			if (block_idx >= msg->length)
-				break;
+	/* decode the optional TMC data */
+	while (array_idx < (msg->length * 28)) {
+		/* extract the next label */
+		label = 0;
+		for (int i = 0; i < label_len; i++) {
+			if (priv_state->optional_tmc[array_idx++])
+				label |= 1 << (label_len - 1 - i); 
 		}
 
-		/* extract the associated data block, handle situation where it
-		 * is split across two adjacent RDS-TMC groups */
+		/* extract the associated data block */
+		data = 0;
 		len = additional_lut[label];	/* length of data block */
-		if (pos + len > data_len) {
-			o_len = len - (data_len - pos);	/* overhang length */
-			len = data_len - pos;	/* remaining data in current block*/
-			data = optional[block_idx] >> (32 - pos - len + o_len) &
-				get_bitmask(len + o_len);
-			if (++block_idx >= msg->length)
-				break;
-			pos = 0;	/* start at beginning of next block */
-			label |= optional[block_idx] >> (32 - pos - o_len);
-		} else {
-			data = optional[block_idx] >> (32 - pos - len) &
-				get_bitmask(len);
-			data += len % data_len;
-			/* end of optional block reached? */
-			block_idx = (pos == 0) ? block_idx+1 : block_idx;
+		for (int i = 0; i < len; i++) {
+			if (priv_state->optional_tmc[array_idx++])
+				data |= 1 << (len - 1 - i);
 		}
 
-		/* if  the label is not "reserved for future use", store
-		 * the extracted additional information */
-		if (label == 15) {
+		/* if  the label is not "reserved for future use", or both
+		 * fields are 0, store the extracted additional information */
+		if (label == 15)
 			continue;
-		}
+		if (label == 0 && data == 0)
+			continue;
 		fields[*field_idx].label = label;
 		fields[*field_idx].data = data;
 		*field_idx += 1;
@@ -396,7 +356,6 @@ static uint32_t rds_decode_tmc_multi_group(struct rds_private_state *priv_state)
 {
 	struct v4l2_rds_group *grp = &priv_state->rds_group;
 	struct v4l2_rds_tmc_msg *msg = &priv_state->new_tmc_msg;
-	uint32_t *optional = priv_state->optional_tmc;
 	bool message_completed = false;
 	uint8_t grp_seq_id;
 	uint64_t buffer;
@@ -410,6 +369,7 @@ static uint32_t rds_decode_tmc_multi_group(struct rds_private_state *priv_state)
 	if (grp->data_c_msb & 0x80) {
 		/* begine decoding of new message */
 		memset(msg, 0, sizeof(msg));
+		memset(priv_state->optional_tmc, 0, 112*sizeof(bool)); 
 		/* bits 0-3 of block 2 contain continuity index */
 		priv_state->continuity_id = grp->data_b_lsb & 0x07;
 		/* bit 15 of block 3 indicates follow diversion advice */
@@ -429,11 +389,17 @@ static uint32_t rds_decode_tmc_multi_group(struct rds_private_state *priv_state)
 	else if (grp->data_c_msb & 0x40 &&
 		(grp->data_b_lsb & 0x07) == priv_state->continuity_id) {
 		priv_state->grp_seq_id = grp_seq_id;
-		/* store group for later decoding */
-		buffer = grp->data_c_msb << 28 | grp->data_c_lsb << 20 |
-			grp->data_d_msb << 12 | grp->data_d_lsb << 4;
-		optional[0] = buffer;
+		/* store group for later decoding by transforming the bit values
+		 * into boolean values and storing them in an array, to ease
+		 * further handling */
 		msg->length = 1;
+		buffer = grp->data_c_msb << 24 | grp->data_c_lsb << 16 |
+			grp->data_d_msb << 8 | grp->data_d_lsb;
+		/* the buffer contains 28 bits of additional information */
+		for (int i = 27; i >= 0; i--) {
+			if (buffer & (1 << i))
+				priv_state->optional_tmc[27-i] = true;
+		}
 		if (grp_seq_id == 0)
 			message_completed = true;
 	}
@@ -444,9 +410,14 @@ static uint32_t rds_decode_tmc_multi_group(struct rds_private_state *priv_state)
 		(grp_seq_id == priv_state->grp_seq_id-1)) {
 		priv_state->grp_seq_id = grp_seq_id;
 		/* store group for later decoding */
-		buffer = grp->data_c_msb << 28 | grp->data_c_lsb << 20 |
-			grp->data_d_msb << 12 | grp->data_d_lsb << 4;
-		optional[msg->length++] = buffer;
+		msg->length += 1;
+		buffer = grp->data_c_msb << 24 | grp->data_c_lsb << 16|
+			grp->data_d_msb << 8 | grp->data_d_lsb;
+		/* the buffer contains 28 bits of additional information */
+		for (int i = 27; i >= 0; i--) {
+			if (buffer & (1 << i))
+				priv_state->optional_tmc[msg->length*28 + 27 - i] = true;
+		}
 		if (grp_seq_id == 0)
 			message_completed = true;
 	}
