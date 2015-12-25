@@ -457,12 +457,12 @@ int main(int argc, char **argv)
 		.options = options,
 		.parser = parse_opt,
 		.doc = "DVB zap utility",
-		.args_doc = "<initial file>",
+		.args_doc = "<channel name>",
 	};
 
 	memset(&args, 0, sizeof(args));
 	args.sat_number = -1;
-
+	args.input_format = FILE_DVBV5;
 	argp_parse(&argp, argc, argv, 0, &idx, &args);
 
 	if (idx < argc)
@@ -472,7 +472,6 @@ int main(int argc, char **argv)
 		argp_help(&argp, stderr, ARGP_HELP_STD_HELP, PROGRAM_NAME);
 		return -1;
 	}
-
 	if (args.input_format == FILE_UNKNOWN) {
 		fprintf(stderr, "ERROR: Please specify a valid format\n");
 		argp_help(&argp, stderr, ARGP_HELP_STD_HELP, PROGRAM_NAME);
@@ -514,7 +513,7 @@ int main(int argc, char **argv)
 	parms = dvb_fe_open(args.adapter, args.frontend, 0, args.force_dvbv3);
 	if (!parms)
 		return -1;
-	if (lnb)
+	if (lnb >= 0)
 		parms->lnb = dvb_sat_get_lnb(lnb);
 	if (args.sat_number > 0)
 		parms->sat_number = args.sat_number % 3;
