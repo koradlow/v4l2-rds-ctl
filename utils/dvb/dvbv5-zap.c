@@ -51,7 +51,7 @@ struct arguments {
 	char *filename;
 	unsigned adapter, frontend, demux, get_detected, get_nit;
 	int force_dvbv3, lnb, sat_number;
-	unsigned diseqc_wait, silent, frontend_only, freq_bpf;
+	unsigned diseqc_wait, silent, verbose, frontend_only, freq_bpf;
 	unsigned timeout, dvr, rec_psi, exit_after_tuning;
 	unsigned human_readable, record;
 	unsigned n_apid, n_vpid;
@@ -73,6 +73,7 @@ static const struct argp_option options[] = {
 	{"record",	'r', NULL,			0, "set up /dev/dvb/adapterX/dvr0 for TS recording", 0},
 	{"pat",		'p', NULL,			0, "add pat and pmt to TS recording (implies -r)", 0},
 	{"silence",	's', NULL,			0, "increases silence (can be used more than once)", 0},
+	{"verbose",	'v', NULL,			0, "Verbose output", 0},
 	{"human",	'H', NULL,			0, "human readable output", 0},
 	{"frontend",	'F', NULL,			0, "set up frontend only, don't touch demux", 0},
 	{"timeout",	't', "seconds",			0, "timeout for zapping and for recording", 0},
@@ -421,6 +422,9 @@ static error_t parse_opt(int k, char *optarg, struct argp_state *state)
 	case 's':
 		args->silent++;
 		break;
+	case 'v':
+		args->verbose = 1;
+		break;
 	case 'F':
 		args->frontend_only = 1;
 		break;
@@ -519,6 +523,7 @@ int main(int argc, char **argv)
 		parms->sat_number = args.sat_number % 3;
 	parms->diseqc_wait = args.diseqc_wait;
 	parms->freq_bpf = args.freq_bpf;
+	parms->verbose = args.verbose;
 
 	if (parse(&args, parms, channel, &vpid, &apid, &sid))
 		return -1;
