@@ -103,9 +103,9 @@ struct dvb_diseqc_slave_reply {
 
 
 typedef enum fe_sec_voltage {
-	SEC_VOLTAGE_13,
+	SEC_VOLTAGE_OFF,
 	SEC_VOLTAGE_18,
-	SEC_VOLTAGE_OFF
+	SEC_VOLTAGE_13,
 } fe_sec_voltage_t;
 
 
