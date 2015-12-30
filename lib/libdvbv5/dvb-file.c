@@ -729,10 +729,10 @@ int write_dvb_file(const char *fname, struct dvb_file *dvb_file)
 					*attr_name);
 		}
 		fprintf(fp, "\n");
-
-		for (i = 0; i < entry->n_props; i++) {
-                  if (entry->props[i].cmd < DTV_USER_COMMAND_START)
-                    continue;
+/* FIXME: Do we really need this loop
+		for (i = DTV_USER_COMMAND_START; i < entry->n_props; i++) {
+//                  if (entry->props[i].cmd < DTV_USER_COMMAND_START)
+//                    continue;
 			const char * const *attr_name = dvb_user_attr_names[entry->props[i].cmd - DTV_USER_COMMAND_START];
 			if (attr_name) {
 				int j;
@@ -754,6 +754,7 @@ int write_dvb_file(const char *fname, struct dvb_file *dvb_file)
 					*attr_name);
 		}
 		fprintf(fp, "\n");
+*/
 	}
 	fclose(fp);
 	return 0;
