@@ -412,18 +412,19 @@ static int fill_entry(struct dvb_entry *entry, char *key, char *value)
 			break;
 	}
 	if (i < ARRAY_SIZE(dvb_user_name)) {
-		const char * const *attr_name = dvb_attr_names(i);
+		const char * const *attr_name = dvb_attr_names(i +  DTV_USER_COMMAND_START);
 		n_prop = entry->n_props;
 		entry->props[n_prop].cmd = i + DTV_USER_COMMAND_START;
-		if (!attr_name || !*attr_name)
+		if (!attr_name || !*attr_name) {
 			entry->props[n_prop].u.data = atol(value);
-		else {
-			for (j = 0; attr_name[j]; j++)
+		} else {
+			for (j = 0; attr_name[j]; j++) {
 				if (!strcasecmp(value, attr_name[j]))
 					break;
+			}
 			if (!attr_name[j])
 				return -2;
-			entry->props[n_prop].u.data = j + DTV_USER_COMMAND_START;
+			entry->props[n_prop].u.data = j;
 		}
 		entry->n_props++;
 		return 0;
@@ -728,10 +729,10 @@ int write_dvb_file(const char *fname, struct dvb_file *dvb_file)
 					*attr_name);
 		}
 		fprintf(fp, "\n");
-
-		for (i = 0; i < entry->n_props; i++) {
-                  if (entry->props[i].cmd < DTV_USER_COMMAND_START)
-                    continue;
+/* FIXME: Do we really need this loop
+		for (i = DTV_USER_COMMAND_START; i < entry->n_props; i++) {
+//                  if (entry->props[i].cmd < DTV_USER_COMMAND_START)
+//                    continue;
 			const char * const *attr_name = dvb_user_attr_names[entry->props[i].cmd - DTV_USER_COMMAND_START];
 			if (attr_name) {
 				int j;
@@ -753,6 +754,7 @@ int write_dvb_file(const char *fname, struct dvb_file *dvb_file)
 					*attr_name);
 		}
 		fprintf(fp, "\n");
+*/
 	}
 	fclose(fp);
 	return 0;

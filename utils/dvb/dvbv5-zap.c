@@ -51,7 +51,7 @@ struct arguments {
 	char *filename;
 	unsigned adapter, frontend, demux, get_detected, get_nit;
 	int force_dvbv3, lnb, sat_number;
-	unsigned diseqc_wait, silent, frontend_only, freq_bpf;
+	unsigned diseqc_wait, silent, verbose, frontend_only, freq_bpf;
 	unsigned timeout, dvr, rec_psi, exit_after_tuning;
 	unsigned human_readable, record;
 	unsigned n_apid, n_vpid;
@@ -73,6 +73,7 @@ static const struct argp_option options[] = {
 	{"record",	'r', NULL,			0, "set up /dev/dvb/adapterX/dvr0 for TS recording", 0},
 	{"pat",		'p', NULL,			0, "add pat and pmt to TS recording (implies -r)", 0},
 	{"silence",	's', NULL,			0, "increases silence (can be used more than once)", 0},
+	{"verbose",	'v', NULL,			0, "Verbose output", 0},
 	{"human",	'H', NULL,			0, "human readable output", 0},
 	{"frontend",	'F', NULL,			0, "set up frontend only, don't touch demux", 0},
 	{"timeout",	't', "seconds",			0, "timeout for zapping and for recording", 0},
@@ -421,6 +422,9 @@ static error_t parse_opt(int k, char *optarg, struct argp_state *state)
 	case 's':
 		args->silent++;
 		break;
+	case 'v':
+		args->verbose = 1;
+		break;
 	case 'F':
 		args->frontend_only = 1;
 		break;
@@ -457,12 +461,12 @@ int main(int argc, char **argv)
 		.options = options,
 		.parser = parse_opt,
 		.doc = "DVB zap utility",
-		.args_doc = "<initial file>",
+		.args_doc = "<channel name>",
 	};
 
 	memset(&args, 0, sizeof(args));
 	args.sat_number = -1;
-
+	args.input_format = FILE_DVBV5;
 	argp_parse(&argp, argc, argv, 0, &idx, &args);
 
 	if (idx < argc)
@@ -472,7 +476,6 @@ int main(int argc, char **argv)
 		argp_help(&argp, stderr, ARGP_HELP_STD_HELP, PROGRAM_NAME);
 		return -1;
 	}
-
 	if (args.input_format == FILE_UNKNOWN) {
 		fprintf(stderr, "ERROR: Please specify a valid format\n");
 		argp_help(&argp, stderr, ARGP_HELP_STD_HELP, PROGRAM_NAME);
@@ -514,12 +517,13 @@ int main(int argc, char **argv)
 	parms = dvb_fe_open(args.adapter, args.frontend, 0, args.force_dvbv3);
 	if (!parms)
 		return -1;
-	if (lnb)
+	if (lnb >= 0)
 		parms->lnb = dvb_sat_get_lnb(lnb);
 	if (args.sat_number > 0)
 		parms->sat_number = args.sat_number % 3;
 	parms->diseqc_wait = args.diseqc_wait;
 	parms->freq_bpf = args.freq_bpf;
+	parms->verbose = args.verbose;
 
 	if (parse(&args, parms, channel, &vpid, &apid, &sid))
 		return -1;

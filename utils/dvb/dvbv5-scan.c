@@ -168,6 +168,12 @@ static void add_new_freq(struct dvb_entry *entry, uint32_t freq)
 	}
 
 	memcpy(new_entry, entry, sizeof(*entry));
+	new_entry->channel = NULL;
+	new_entry->vchannel = NULL;
+	new_entry->location = NULL;
+	new_entry->video_pid = NULL;
+	new_entry->audio_pid = NULL;
+	new_entry->other_el_pid = NULL;
 
 	/*
 	 * The frequency should change to the new one. Seek for it and
@@ -578,7 +584,6 @@ int main(int argc, char **argv)
 		parms->sat_number = args.sat_number % 3;
 	parms->diseqc_wait = args.diseqc_wait;
 	parms->freq_bpf = args.freq_bpf;
-
 	if (run_scan(&args, parms))
 		return -1;
 

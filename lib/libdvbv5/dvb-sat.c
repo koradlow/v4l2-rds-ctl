@@ -307,6 +307,8 @@ static int dvbsat_diseqc_set_input(struct dvb_v5_fe_parms *parms, uint16_t t)
 			vol_high = pol_v ? 0 : 1;
 			tone_on = high_band;
 			mini_b = parms->sat_number & 1;
+			// DVB-S uses voltage for polarization
+			dvb_fe_store_parm(parms, DTV_VOLTAGE, vol_high);
 		}
 	}
 
